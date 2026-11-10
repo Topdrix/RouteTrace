@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | FreePufferFish</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background:
+                linear-gradient(rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.25)),
+                url("/static/background.jpg") center / cover;
+            color: #183040;
+        }
+
+        main {
+            width: min(100%, 500px);
+            padding: 40px 32px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.92);
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        p {
+            margin-bottom: 20px;
+        }
+
+        form {
+            margin: 20px 0;
+            display: flex;
+            gap: 8px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #aab6bd;
+            border-radius: 6px;
+            outline: none;
+        }
+
+        button[type="submit"] {
+            padding: 10px 16px;
+            border: 0;
+            border-radius: 6px;
+            background: #183040;
+            color: white;
+            cursor: pointer;
+        }
+
+        .results-box {
+            text-align: left;
+            background: #f4f4f4;
+            padding: 12px;
+            border-radius: 6px;
+            max-height: 220px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 13px;
+            margin-bottom: 20px;
+            border: 1px solid #dce2e5;
+        }
+
+        a.logout-btn {
+            display: inline-block;
+            padding: 10px 18px;
+            border-radius: 5px;
+            background: #183040;
+            color: white;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Welcome, {{ username }}!</h1>
+        <p>You are logged in.</p>
+        <p>Trace a host using custom Python UDP and ICMP sockets.</p>
+        
+        <form method="POST">
+            <input type="text" name="target" value="{{ target or '' }}" placeholder="Enter a host (e.g. example.com)" required>
+            <button type="submit">Run Trace</button>
+        </form>
+
+        {% if results %}
+            <div class="results-box">
+                {% for hop in results %}
+                    <div style="margin-bottom: 4px;">
+                        <strong>Hop {{ hop.hop }}:</strong> {{ hop.ip }} — <em>{{ hop.time }}</em>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <a class="logout-btn" href="{{ url_for('logout') }}">Log out</a>
+    </main>
+</body>
+</html>

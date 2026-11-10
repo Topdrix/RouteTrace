@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | FreePufferFish</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 36px 20px;
+            background:
+                linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)),
+                url("/static/background.jpg") center / cover fixed;
+            color: #183040;
+            font-family: Arial, sans-serif;
+        }
+        main {
+            width: min(100%, 1000px);
+            margin: 0 auto;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.94);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+        h1 { margin: 0; }
+        .logout { color: #183040; }
+        .summary { margin: 18px 0; color: #53636d; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 13px 10px; border-bottom: 1px solid #dce2e5; }
+        th { color: #53636d; font-size: 13px; text-transform: uppercase; }
+        .delete {
+            padding: 8px 11px;
+            border: 0;
+            border-radius: 5px;
+            background: #9d3026;
+            color: white;
+            cursor: pointer;
+        }
+        .empty { padding: 28px 10px; color: #53636d; text-align: center; }
+        @media (max-width: 600px) {
+            main { padding: 22px 16px; }
+            header { align-items: flex-start; }
+            th, td { padding: 10px 7px; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>Admin</h1>
+            <a class="logout" href="{{ url_for('logout') }}">Log out</a>
+        </header>
+        <p class="summary">{{ users|length }} registered user{{ '' if users|length == 1 else 's' }}</p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Joined</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <form method="post" action="{{ url_for('admin_delete_user', user_id=user.id) }}" onsubmit="return confirm('Delete this user account? This cannot be undone.');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <button class="delete" type="submit">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td class="empty" colspan="4">No registered users yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+</body>
+</html>

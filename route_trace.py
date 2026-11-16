@@ -1,11 +1,100 @@
 import argparse
+import ctypes
 import select
 import socket
+import struct
+import sys
 import time
 
 
 def _error_result(message):
     return [{"hop": 1, "ip": f"Error: {message}", "time": "-"}]
+
+
+def _run_windows_traceroute(destination_ip, max_hops, timeout):
+    class IpOptionInformation(ctypes.Structure):
+        _fields_ = [
+            ("ttl", ctypes.c_ubyte),
+            ("tos", ctypes.c_ubyte),
+            ("flags", ctypes.c_ubyte),
+            ("options_size", ctypes.c_ubyte),
+            ("options_data", ctypes.POINTER(ctypes.c_ubyte)),
+        ]
+
+    class IcmpEchoReply(ctypes.Structure):
+        _fields_ = [
+            ("address", ctypes.c_uint32),
+            ("status", ctypes.c_uint32),
+            ("round_trip_time", ctypes.c_uint32),
+            ("data", ctypes.c_void_p),
+            ("data_size", ctypes.c_ushort),
+            ("reserved", ctypes.c_ushort),
+            ("options", IpOptionInformation),
+        ]
+
+    try:
+        iphlpapi = ctypes.WinDLL("iphlpapi", use_last_error=True)
+        iphlpapi.IcmpCreateFile.restype = ctypes.c_void_p
+        iphlpapi.IcmpCloseHandle.argtypes = [ctypes.c_void_p]
+        iphlpapi.IcmpSendEcho.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_uint32,
+            ctypes.c_void_p,
+            ctypes.c_ushort,
+            ctypes.POINTER(IpOptionInformation),
+            ctypes.c_void_p,
+            ctypes.c_uint32,
+            ctypes.c_uint32,
+        ]
+        iphlpapi.IcmpSendEcho.restype = ctypes.c_uint32
+        handle = iphlpapi.IcmpCreateFile()
+    except (AttributeError, OSError) as exc:
+        return _error_result(f"Cannot initialize Windows ICMP support ({exc}).")
+
+    if handle == ctypes.c_void_p(-1).value:
+        return _error_result(
+            f"Cannot open a Windows ICMP handle ({ctypes.WinError(ctypes.get_last_error())})."
+        )
+
+    destination_address = int.from_bytes(socket.inet_aton(destination_ip), sys.byteorder)
+    timeout_ms = max(1, int(timeout * 1000))
+    hops = []
+    try:
+        for ttl in range(1, max_hops + 1):
+            options = IpOptionInformation(ttl=ttl)
+            reply = IcmpEchoReply()
+            started_at = time.perf_counter()
+            reply_count = iphlpapi.IcmpSendEcho(
+                handle,
+                destination_address,
+                None,
+                0,
+                ctypes.byref(options),
+                ctypes.byref(reply),
+                ctypes.sizeof(reply),
+                timeout_ms,
+            )
+
+            if not reply_count and reply.status == 11010:
+                hops.append({"hop": ttl, "ip": "* (Request timed out)", "time": "-"})
+                continue
+            if not reply_count:
+                return _error_result(f"Windows ICMP request failed (status {reply.status}).")
+
+            current_ip = socket.inet_ntoa(struct.pack("=I", reply.address))
+            hops.append({
+                "hop": ttl,
+                "ip": current_ip,
+                "time": f"{reply.round_trip_time}ms",
+            })
+            if reply.status == 0 or current_ip == destination_ip:
+                break
+            if reply.status != 11013:
+                break
+    finally:
+        iphlpapi.IcmpCloseHandle(handle)
+
+    return hops
 
 
 def _parse_icmp_response(packet):
@@ -50,6 +139,9 @@ def run_manual_traceroute(destination_name, max_hops=20, timeout=2.0):
         destination_ip = socket.gethostbyname(destination_name)
     except socket.gaierror:
         return _error_result("Invalid or unreachable host name.")
+
+    if sys.platform == "win32":
+        return _run_windows_traceroute(destination_ip, max_hops, timeout)
 
     try:
         recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)

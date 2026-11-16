@@ -53,6 +53,7 @@ class RouteTraceTests(unittest.TestCase):
         sender = FakeSocket()
 
         with patch("route_trace.socket.gethostbyname", return_value="203.0.113.8"), \
+                patch("route_trace.sys.platform", "linux"), \
                 patch("route_trace.socket.socket", side_effect=[receiver, sender]), \
                 patch("route_trace.select.select", side_effect=lambda *_: ([receiver], [], [])):
             results = run_manual_traceroute("example.com", max_hops=2)

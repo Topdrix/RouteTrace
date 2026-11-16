@@ -1,8 +1,12 @@
 # RouteTrace
 
-RouteTrace is a Flask app with a manually implemented IPv4 traceroute. It sends
-UDP probes and receives ICMP responses through Python sockets; it does not call
-the operating system's `traceroute` or `tracert` command.
+[לספר הפרויקט המלא בעברית](./PROJECT_BOOK_HE.md).
+
+RouteTrace is a Flask app with a manually implemented IPv4 traceroute. On
+Windows it sends ICMP Echo probes with a different TTL for each hop through the
+Windows IP Helper API. On other platforms it sends UDP probes and receives
+ICMP responses through Python sockets. It does not call the operating system's
+`traceroute` or `tracert` command.
 
 ## Run the web app
 
@@ -23,9 +27,8 @@ python route_trace.py example.com
 
 The optional `--max-hops` and `--timeout` arguments let you customize the
 trace, for example `python route_trace.py example.com --max-hops 12 --timeout 1`.
-The terminal command uses the same Python socket implementation as the
-dashboard and does not require the Flask server or PostgreSQL to be running.
+The terminal command uses the same traceroute implementation as the dashboard
+and does not require the Flask server or PostgreSQL to be running.
 
-On Windows, raw ICMP sockets generally require an elevated terminal. If socket
-creation is denied, reopen PowerShell as Administrator and retry. Asterisks in
-the results mean that no ICMP response arrived before that hop's timeout.
+Asterisks in the results mean that no ICMP response arrived before that hop's
+timeout.
